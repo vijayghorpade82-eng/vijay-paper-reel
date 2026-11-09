@@ -1,0 +1,48 @@
+{
+  "lead": 0.15,
+  "tail": 0.6,
+  "lines": [
+    {
+      "id": "hook",
+      "text": "This free Claude skill turns any topic into a Vijay Studio style video.",
+      "after": 0.12,
+      "file": "hook.wav"
+    },
+    {
+      "id": "draw",
+      "text": "You describe the video, and Claude draws every step on a blackboard.",
+      "after": 0.12,
+      "file": "draw.wav"
+    },
+    {
+      "id": "sync",
+      "text": "Then a voice explains it, and the pen lands right on the words.",
+      "after": 0.12,
+      "file": "sync.wav"
+    },
+    {
+      "id": "free",
+      "text": "No API keys, no credits. It all runs on your own laptop.",
+      "after": 0.12,
+      "file": "free.wav"
+    },
+    {
+      "id": "catch",
+      "text": "The catch: it draws diagrams, not faces, so it's built for teaching.",
+      "after": 0.12,
+      "file": "catch.wav"
+    },
+    {
+      "id": "repo",
+      "text": "And get this. It's open source on GitHub, with over a hundred stars.",
+      "after": 0.12,
+      "file": "repo.wav"
+    },
+    {
+      "id": "cta",
+      "text": "For the repo link, comment BOARD.",
+      "after": 0.1,
+      "file": "cta.wav"
+    }
+  ]
+}

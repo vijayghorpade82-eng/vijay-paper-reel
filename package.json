@@ -1,0 +1,10 @@
+{
+  "name": "vijay-paper-reel",
+  "version": "1.0.0",
+  "description": "Paper-Reel Studio by Vijay: Automated 9:16 vertical video & Reel creation engine with VoiceStudio and local AI",
+  "author": "Vijay",
+  "license": "MIT",
+  "dependencies": {
+    "playwright": "1.58.0"
+  }
+}

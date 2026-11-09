@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+# reel — the paper-reel pipeline in one command. Free and local: Kokoro voice, whisper.cpp timing, canvas + Playwright + ffmpeg.
+#   reel generate <piece> [out.mp4]          all-in-one: VoiceStudio voice + align + build + export MP4
+#   reel doctor                              check every dependency, print the fix for anything missing
+#   reel new <piece-dir> [--from vijay-skill] copy the starter (or an example) into <piece-dir>
+#   reel voice <piece> [--voice am_michael] [--speed 1.32] [--only id1,id2] [--say]
+#                                            one Kokoro take per script line -> voice.wav + word times (--say: macOS voice)
+#   reel build <piece>                       assemble index.html (style + kit + scenes + VOICE)
+#   reel still <piece> <t1,t2,..> <out.png> [--scale 0.4]   render frames to look at
+#   reel check <piece>                       text overlap / safe-zone check + determinism
+#   reel export <piece> [out.mp4]            render the MP4 (-14 LUFS), copy it to out.mp4, delete the frame cache
+set -euo pipefail
+SKILL="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+export NODE_PATH="$SKILL/node_modules${NODE_PATH:+:$NODE_PATH}"
+if [ -z "${KOKORO_PY:-}" ]; then
+  for KOKORO_PY in "$HOME/.venvs/kokoro/bin/python" "$HOME/motion-kits/.venv-voice/bin/python" python3; do [ -x "$KOKORO_PY" ] && break; done
+fi
+KOKORO_DIR="${KOKORO_DIR:-$HOME/.cache/hyperframes/tts}"; export KOKORO_DIR
+WHISPER_MODEL="${WHISPER_MODEL:-$HOME/.cache/whisper/ggml-base.en.bin}"; export WHISPER_MODEL
+T="$SKILL/tools"
+cmd="${1:-help}"; shift || true
+
+case "$cmd" in
+  doctor)
+    ok=1; c() { if eval "$2" >/dev/null 2>&1; then echo "  ok    $1"; else echo "  MISSING $1 -> $3"; ok=0; fi; }
+    echo "paper-reel doctor ($SKILL)"
+    c "node 18+"            "node -e 'process.exit(+process.versions.node.split(\".\")[0] >= 18 ? 0 : 1)'" "brew install node"
+    c "ffmpeg"              "command -v ffmpeg" "brew install ffmpeg"
+    c "playwright (skill)"  "node -e \"require('playwright')\"" "cd '$SKILL' && npm install"
+    c "chromium"            "node -e \"const fs=require('fs');process.exit(fs.existsSync(require('playwright').chromium.executablePath())?0:1)\"" "cd '$SKILL' && npx playwright install chromium"
+    c "whisper-cli"         "command -v whisper-cli" "brew install whisper-cpp"
+    c "whisper model"       "test -f '$WHISPER_MODEL'" "mkdir -p ~/.cache/whisper && curl -L -o ~/.cache/whisper/ggml-base.en.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin"
+    c "kokoro python ($KOKORO_PY)" "'$KOKORO_PY' -c 'import kokoro_onnx, soundfile, espeakng_loader'" "python3 -m venv ~/.venvs/kokoro && ~/.venvs/kokoro/bin/pip install kokoro-onnx soundfile (or set KOKORO_PY to a python that has them)"
+    c "kokoro model"        "test -f '$KOKORO_DIR/models/kokoro-v1.0.onnx' -a -f '$KOKORO_DIR/voices/voices-v1.0.bin'" "mkdir -p $KOKORO_DIR/models $KOKORO_DIR/voices && curl -L -o $KOKORO_DIR/models/kokoro-v1.0.onnx https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.onnx && curl -L -o $KOKORO_DIR/voices/voices-v1.0.bin https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin"
+    c "fonts (SuperClarendon, Avenir Next, Chalkduster)" "ls /System/Library/Fonts/Supplemental/SuperClarendon.ttc /System/Library/Fonts/Avenir\ Next.ttc /System/Library/Fonts/Supplemental/Chalkduster.ttf" "macOS system fonts; on other systems the kit falls back to Rockwell/Georgia, Helvetica/Arial"
+    [ $ok = 1 ] && echo "all good" || { echo "fix the MISSING lines above"; exit 1; } ;;
+  new)
+    dest="${1:?usage: reel new <piece-dir> [--from vijay-skill]}"; shift; from="templates/starter"
+    if [ "${1:-}" = "--from" ]; then from="examples/${2:?example name}"; fi
+    [ -e "$dest" ] && { echo "$dest already exists"; exit 1; }
+    mkdir -p "$(dirname "$dest")"; cp -R "$SKILL/$from" "$dest"
+    echo "new piece: $dest (from $from). Next: edit voice/script.json, then: reel voice $dest" ;;
+  generate)
+    p="${1:?usage: reel generate <piece> [out.mp4] [--voice V] [--speed S]}"; shift
+    out="${1:-}"; if [ -n "$out" ] && [[ "$out" != --* ]]; then shift; else out="$p.mp4"; fi
+    python3 "$T/voicestudio_lines.py" "$p" "$@"
+    node "$T/voice.mjs" "$p"
+    node "$T/align.mjs" "$p"
+    node "$T/build.mjs" "$p" >/dev/null
+    node "$T/export.mjs" "$p" --workers "${WORKERS:-6}" --no-captions | grep -E "written|wrote|voice:|error|Error" || true
+    rm -rf "$p/frames"
+    [ -n "$out" ] && cp "$p/renders/final.mp4" "$out" && echo "-> $out"
+    ffmpeg -nostats -i "$p/renders/final.mp4" -af ebur128=framelog=quiet -f null - 2>&1 | grep -E "^\s+I:" || true ;;
+  voice)
+    p="${1:?usage: reel voice <piece> [--voice V] [--speed S] [--only ids] [--say]}"; shift
+    if [ "${1:-}" = "--say" ]; then node "$T/voice.mjs" "$p" --scratch; else "$KOKORO_PY" -u "$T/kokoro_lines.py" "$p" "$@" 2>&1 | grep -v -i warn || true; node "$T/voice.mjs" "$p"; fi
+    node "$T/align.mjs" "$p" ;;
+  build) node "$T/build.mjs" "${1:?piece}" ;;
+  still) p="${1:?piece}"; ts="${2:?times}"; out="${3:?out.png}"; shift 3; node "$T/build.mjs" "$p" >/dev/null && node "$T/still.mjs" "$p" "$ts" "$out" --scale "${2:-0.4}" ;;
+  check) p="${1:?piece}"; node "$T/build.mjs" "$p" >/dev/null; node "$T/textcheck.mjs" "$p" | tail -12; node "$T/tile.mjs" "$p" "/tmp/reel-tile.png" 30 300 600 | grep -i determin ;;
+  export)
+    p="${1:?piece}"; out="${2:-}"; node "$T/build.mjs" "$p" >/dev/null
+    node "$T/export.mjs" "$p" --workers "${WORKERS:-6}" --no-captions | grep -E "written|wrote|voice:|error|Error" || true
+    rm -rf "$p/frames"
+    [ -n "$out" ] && cp "$p/renders/final.mp4" "$out" && echo "-> $out"
+    ffmpeg -nostats -i "$p/renders/final.mp4" -af ebur128=framelog=quiet -f null - 2>&1 | grep -E "^\s+I:" || true ;;
+  *) sed -n '2,12p' "$0" ;;
+esac

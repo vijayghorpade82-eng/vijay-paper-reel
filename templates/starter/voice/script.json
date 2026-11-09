@@ -1,0 +1,8 @@
+{ "lead": 0.15, "tail": 0.6, "lines": [
+  { "id": "hook",   "text": "This Claude skill turns any topic into a paper style reel, for free.", "after": 0.12 },
+  { "id": "how",    "text": "You write six lines, and it builds a scene for every one.", "after": 0.12 },
+  { "id": "read",  "text": "A local voice reads them, and every word lands on screen.", "after": 0.12 },
+  { "id": "catch",  "text": "The catch: it's a template, so the jokes are still on you.", "after": 0.12 },
+  { "id": "payoff", "text": "And get this. No API keys, no credits, nothing to pay.", "after": 0.12 },
+  { "id": "cta",    "text": "For the skill, comment PAPER.", "after": 0.1 }
+] }

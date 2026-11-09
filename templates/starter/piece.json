@@ -1,0 +1,9 @@
+{
+  "name": "starter",
+  "title": "paper-reel starter",
+  "format": { "width": 1080, "height": 1920, "fps": 30 },
+  "storyFormat": "voice-cut list: hook -> how -> proof -> catch -> 'and get this' -> comment CTA",
+  "style": "paper-reel",
+  "voice": { "file": "voice/voice.wav", "music": -13 },
+  "review": { "safe": { "top": 120, "bottom": 300, "right": 120 }, "refs": {} }
+}

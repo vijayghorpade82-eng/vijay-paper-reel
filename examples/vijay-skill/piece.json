@@ -1,0 +1,9 @@
+{
+  "name": "vijay-skill",
+  "title": "vijay-explainer skill reel (paper-reel style experiment)",
+  "format": { "width": 1080, "height": 1920, "fps": 30 },
+  "storyFormat": "voice-cut list (one scene per spoken line, hook -> how -> catch -> payoff -> CTA)",
+  "style": "paper-reel",
+  "voice": { "file": "voice/voice.wav", "music": -13 },
+  "review": { "safe": { "top": 120, "bottom": 300, "right": 120 }, "refs": {} }
+}
