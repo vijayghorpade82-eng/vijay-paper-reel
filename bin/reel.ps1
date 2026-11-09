@@ -247,7 +247,7 @@ switch ($Command.ToLower()) {
         if (Test-Path $finalMp4) {
             Copy-Item -Path $finalMp4 -Destination $out -Force
             Write-Host "`n============================================================" -ForegroundColor Green
-            Write-Host "✓ SUCCESS! Complete Reel generated in one single run:" -ForegroundColor Green
+            Write-Host "[OK] SUCCESS! Complete Reel generated in one single run:" -ForegroundColor Green
             Write-Host "  Video output: $out" -ForegroundColor Green
             Write-Host "============================================================" -ForegroundColor Green
         }
@@ -273,7 +273,7 @@ switch ($Command.ToLower()) {
             Copy-Item -Path $finalMp4 -Destination $out -Force
             Write-Host "-> $out" -ForegroundColor Green
         }
-        ffmpeg -nostats -i $finalMp4 -af "ebur128=framelog=quiet" -f null - 2>&1 | Select-String "^\s+I:"
+        ffmpeg -nostats -i $finalMp4 -af "ebur128=framelog=quiet" -f null - 2>&1 | Select-String 'I:'
     }
 
     Default {
